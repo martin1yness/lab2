@@ -66,6 +66,11 @@ void process_received_string(const char* buffer)
 			// set duty 
 			OCR2B = atoi(op_input);
 			break;
+		case 'F':
+		case 'f':
+			// switch direction manually
+			PORTC ^= (1 << 6);
+			break;
 		case 'L':
 		case 'l':
 			// Toggle Logging Pr, Pm, and T

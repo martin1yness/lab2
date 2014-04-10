@@ -46,6 +46,7 @@ int main()
 		serial_check();
 		check_for_new_bytes_received();
 		
+		
 		if(motorPhaseBufferIdx == 0) {
 			lcd_goto_xy(0,0);
 			print(motorPhaseBuffer);
@@ -55,6 +56,7 @@ int main()
 		lcd_goto_xy(0,1);
 		buf[len] = '\0';
 		print(buf);
+		
 	} //end while loop
 }
 
@@ -75,7 +77,10 @@ inline void ConfigurePulseWithModulationClocks() {
 	
 	// Output to motor
 	DDRD |= (1 << 6); // x1xx_xxxx
-	PORTA &= ~(1 << 6);
+	PORTD &= ~(1 << 6);
+	
+	// Direction PC6
+	PORTC |= (1 << 6);
 	
 	// Counter pin changes
 	//  NOTE: Seem to work whether they are set input or output
