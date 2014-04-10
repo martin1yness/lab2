@@ -1,6 +1,7 @@
 #define ECHO2LCD
 
 #include <pololu/orangutan.h>
+#include <pololu/OrangutanDigital.h>
 #include <stdbool.h>
 #include <inttypes.h>
 #include <stdio.h>
@@ -15,10 +16,15 @@
  * http://forum.pololu.com
  */
 
-// tick count for scheduler, yellow task, green task
-volatile uint32_t G_timer3Ticks = 0;
-volatile uint32_t G_timer0Ticks = 0;
-volatile uint32_t G_timer1Ticks = 0;
+volatile uint32_t motorCount = 0;
+volatile char motorPhaseBuffer[5];
+volatile int motorPhaseBufferIdx;
+
+volatile int global_counts_m1;
+volatile char global_error_m1;
+
+volatile char global_last_m1a_val;
+volatile char global_last_m1b_val;
 
 int main()
 {
@@ -26,14 +32,29 @@ int main()
 
 	clear();	// clear the LCD
 	init_menu();
-
+	
+	// Add terminator
+	//motorPhaseBuffer = malloc(sizeof(char)*5);
+	motorPhaseBuffer[4] = '\0';
+	
 	//enable interrupts
 	sei();
 
+	int len;
+	char buf[32];
 	while (1) {
 		serial_check();
 		check_for_new_bytes_received();
-	
+		
+		if(motorPhaseBufferIdx == 0) {
+			lcd_goto_xy(0,0);
+			print(motorPhaseBuffer);
+		}
+		
+		len = sprintf(buf, "%d %d %d %d", global_counts_m1, global_error_m1, global_last_m1a_val, global_last_m1b_val);
+		lcd_goto_xy(0,1);
+		buf[len] = '\0';
+		print(buf);
 	} //end while loop
 }
 
@@ -52,62 +73,72 @@ inline void ConfigurePulseWithModulationClocks() {
 	OCR2B = 10;
 	TIMSK2 |= 0x4; // xxxx_x101
 	
-	// PD6
-	PORTD |= (1 << 6); // PORTB6
-	PORTD &= ~(1 << 1); // PORTB6
+	// Output to motor
 	DDRD |= (1 << 6); // x1xx_xxxx
-	DDRD &= ~(1 << 1); // xxxx_xx0x
+	PORTA &= ~(1 << 6);
 	
-	PORTA = 0x0;
-	DDRA = 0x0;
-	PORTB = 0x0;
-	DDRB = 0x0;
-	PORTC = 0x0;
-	DDRC = 0x0;
+	// Counter pin changes
+	//  NOTE: Seem to work whether they are set input or output
+	DDRA &= ~0x01 & ~(1<<1);
+	PORTA |= 0x01 | 0x01;
+	
+	// Set pin change interrupt for A0 and A1
+	PCICR = 0x01;
+	PCMSK0 = 0x03;
 }
 
-volatile uint32_t trueCount = 0;
-volatile uint32_t falseCount = 0;
+
 ISR(TIMER2_COMPB_vect) {
-	lcd_goto_xy(0,0);
-	char* buf = malloc(sizeof(char)*32);
-	itoa(PINC, buf, 10);
-	print(buf);
 	
-	lcd_goto_xy(5,0);
-	itoa(trueCount, buf, 10);
-	print(buf);
-	
-	lcd_goto_xy(5,1);
-	itoa(falseCount, buf, 10);
-	print(buf);
-	
-	free(buf);
-	
-	if( PIND ^ ~(1 << 1) == 0x02 ) {		
-		lcd_goto_xy(0,1);
-		print("True");
-		++trueCount;
-	} else {
-		lcd_goto_xy(0,1);
-		print("False");
-		++falseCount;
-	}	
 }
 
-volatile uint32_t motorCount = 0;
-volatile char redTog = 0x0;
-ISR(PCINT2_vect) {
-	++motorCount;
-	red_led(redTog);
-	redTog ^= 0x01;
-	lcd_goto_xy(0,0);
-	char* buf = malloc(sizeof(char)*32);
-	itoa(motorCount, buf, 10);
-	print(buf);
-	free(buf);
-}
+volatile char tog = 1;
+ISR(PCINT0_vect) {
+	red_led(tog);
+	tog ^= 0x01;
+		
+	char t = PINA & 0x03;
+	char * tmpChar = malloc(sizeof(char));
+	itoa((PINA ^ ~0x03) & PINA, tmpChar, 10);
+	motorPhaseBuffer[motorPhaseBufferIdx] = *tmpChar;
+	motorPhaseBufferIdx = (motorPhaseBufferIdx + 1) % 4;	
+	
+	unsigned char m1a_val, m1b_val;
+	switch(t) {
+		case 0x00:
+			m1a_val = 0;
+			m1b_val = 0;
+		break;
+		case 0x01:
+			m1a_val = 1;
+			m1b_val = 0;
+		break;
+		case 0x02:
+			m1a_val = 0;
+			m1b_val = 1;
+		break;
+		case 0x03:
+			m1a_val = 1;
+			m1b_val = 1;
+		break;		
+	}
+	
+	free(tmpChar);
+	
+	//m1a_val = isInputHigh(PINA | (1 << PINA0));
+	//m1b_val = isInputHigh(PINA | (1 << PINA1));
+	
+	char plus_m1 = m1a_val ^ global_last_m1b_val;
+	char minus_m1 = m1b_val ^ global_last_m1a_val;
+	
+	if(plus_m1)
+	global_counts_m1 += 1;
+	if(minus_m1)
+	global_counts_m1 -= 1;
 
-//ISR(TIMER2_OVF_vect) {
-//	red_led(1);
-//}
+	if(m1a_val != global_last_m1a_val && m1b_val != global_last_m1b_val)
+	global_error_m1 = 1;
+	
+	global_last_m1a_val = m1a_val;
+	global_last_m1b_val = m1b_val;
+}
