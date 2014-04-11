@@ -1,5 +1,6 @@
 #include "menu.h"
 #include "main.h"
+#include "pd.h"
 
 #include <pololu/orangutan.h>
 #include <stdio.h>
@@ -74,18 +75,27 @@ void process_received_string(const char* buffer)
 		case 'L':
 		case 'l':
 			// Toggle Logging Pr, Pm, and T
+			loggingOn ^= 0x1;
 			break;
 		case 'V':
 		case 'v':
-			// View values for: Kd, Kp, Vm, Pr, Pm, and T
+			// View values for: Kd, Kp, Vm, Pr, Pm, and T			
+			#ifdef RUNBYSPEED
+			length = sprintf(tempBuffer, "Kd:%f Kp:%f Vm:%f Pr:%f Pm:%f T:%f\r\n>", G_gainDerivative, G_gainProportional, G_currentMotorSpeed, G_desiredMotorSpeed, G_currentMotorSpeed, OCR2B);
+			#else
+			length = sprintf(tempBuffer, "Kd:%f Kp:%f Vm:%f Pr:%f Pm:%f T:%f\r\n>", G_gainDerivative, G_gainProportional, G_currentMotorPosition, G_desiredMotorPosition, G_currentMotorPosition, OCR2B);
+			#endif
+			print_usb(tempBuffer, length);
 			break;
 		case 'R':
 		case 'r':
 			// Set reference position in 'counts'
+			G_desiredMotorPosition = atof(op_input);
 			break;
 		case 'S':
 		case 's':
 			// Set reference speed in 'counts/second'
+			G_desiredMotorSpeed = atof(op_input);
 			break;
 		case 'T':
 		case 't':
@@ -93,15 +103,19 @@ void process_received_string(const char* buffer)
 			break;
 		case 'P':
 			// Increase proportional gain
+			++G_gainProportional;
 			break;
 		case 'p':
 			// Decrease proportional gain
+			--G_gainProportional;
 			break;
 		case 'D':
 			// Increase differential gain
+			++G_gainDerivative;
 			break;
 		case 'd':
 			// Decrease differential gain
+			--G_gainDerivative;
 			break;
 		default:
 			print_usb( "Bad Option. Try one of {LVRSTPpDd}\r\n", 37 );

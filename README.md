@@ -1,4 +1,4 @@
-SENG5831-LAB1
+SENG5831-LAB2
 =============
 
-First Lab for SENG5831
+Second Lab for SENG5831
