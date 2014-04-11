@@ -39,7 +39,7 @@ inline void init_motor() {
 	// 00 (OC2A disconnected) 10 (Clear OC2B on match, Set OC2B bottom, non-inverting) xx (reserved) 11 (Fast PWM 0xFF)
 	TCCR2A = 0x23; // 0010_0011
 	// FOC2A : FOC2B : - : - : WGM22 : CS22 : CS21 : CS20
-	// x : x : x : x : 0 : 1 : 0 : 0   -- 256 prescale
+	// x : x : x : x : 0 : 1 : 0 : 1   -- prescale
 	TCCR2B |= 0x7;
 	OCR2B = 0; // start at 0 duty cycle	
 	//TIMSK2 |= 0x4; // xxxx_x101
@@ -132,14 +132,18 @@ ISR(PCINT0_vect) {
 /************************************************************************/
 /* kEEP TIME                                                            */
 /************************************************************************/
-volatile float global_motorSpeeds[]
+volatile float global_motorSpeeds[3];
+volatile int global_motorSpeedsIdx = 0;
 ISR(TIMER3_COMPA_vect) {
 	++G_time_ms;
-	if(G_time_ms % 10 == 0) {
-		// 10 ms
+	if(G_time_ms % 100 == 0) {
+		// 100 ms
 		float lastPosition = G_currentMotorPosition;
 		G_currentMotorPosition = global_counts_m1 / 4.0f;
-		G_currentMotorSpeed = (lastPosition - G_currentMotorPosition) / 0.0033;
+		global_motorSpeedsIdx = (global_motorSpeedsIdx + 1) % 3;
+		float diff = lastPosition - G_currentMotorPosition;
+		global_motorSpeeds[global_motorSpeedsIdx] = (diff < 0 ? -diff : diff) * 10;
+		G_currentMotorSpeed = (global_motorSpeeds[0] + global_motorSpeeds[1] + global_motorSpeeds[2]) / 3.0f;
 	}
 }
 
