@@ -6,7 +6,9 @@
 #include "menu.h"
 
 /************************************************************************/
-/* Initializes the PD controller ~306.4 Hz                              */
+/*
+/* Initializes the PD controller ~306.4 Hz -> every ~3.3                */
+/*   Max Engine Speed ~55 counts/sec -> every 20ms
 /************************************************************************/
 inline void init_pd() {
 	//
@@ -38,27 +40,39 @@ Kd = Derivative gain
 
 T = Kp(Vr - Vm) + Kd( d (Vr-Vm) / dt )                                    
 
+Let Kp = 10
+T - 10e / ( (e - e') / .05 ) = Kd
+
  Frequency ~306 Hz  ~3.3ms                                             
 /************************************************************************/
+volatile uint16_t everySix = 0; // every sitxth execution is just under 20ms
+volatile float G_lastError = 0;
+
+volatile float G_gainProportional = 5.0f;
+volatile float G_gainDerivative = 7.2f;
+volatile float G_torque = 0;
 ISR(TIMER0_COMPA_vect) {
+	if(++everySix % 6 != 0) {
+		return;		
+	}
+		
 	#ifdef RUNBYSPEED
-	float error = (G_desiredMotorSpeed - G_currentMotorSpeed);
+	float error = (G_desiredMotorSpeed - G_currentMotorSpeed);	
 	#else
 	float error = (G_desiredMotorPosition - G_currentMotorPosition);
 	#endif
 	
-	return;
+	// -.5 * 50 + .05 * (50 / .05) = -25 + 50 = 25
+	G_torque = G_gainProportional * error + G_gainDerivative * ( (G_lastError - error) / 0.05f);		
 	
-	if(error < 0) {
-		error = -error;
-		MOTOR_BACKWARD;
+	G_lastError = error;
+	
+	int16_t newOcr2b = OCR2B + G_torque;
+	if(newOcr2b > 255) {
+		OCR2B = 255;
+	} else if(newOcr2b < 0) {
+		OCR2B = 0;
 	} else {
-		MOTOR_FORWARD;
-	}
-	float T = G_gainProportional * error + G_gainDerivative * ( error / FREQUENCY);
-	if(T > 254) {
-		OCR2B = 254;
-	} else {
-		OCR2B = T;
+		OCR2B = newOcr2b;
 	}
 }

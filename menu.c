@@ -1,9 +1,12 @@
+#define RUNBYSPEED
+
 #include "menu.h"
 #include "main.h"
 #include "pd.h"
 
 #include <pololu/orangutan.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <inttypes.h>
 
 // extern GLOBALS
@@ -51,13 +54,14 @@ void process_received_string(const char* buffer)
 {
 	// Used to pass to USB_COMM for serial communication
 	int length;
-	char tempBuffer[32];
+	char tempBuffer[64];
 	
 	// parse and echo back to serial comm window (and optionally the LCD)	
 	char op_type;
-	char* op_input = malloc(sizeof(char)*20);
+	char* op_input = malloc(sizeof(char)*32);
 	int parsed;
 	parsed = sscanf(buffer, "%c %s", &op_type, op_input);
+	*(op_input + parsed - 3) = '\0';
 	length = sprintf( tempBuffer, "\r\nOp:%c C:%s\r\n", op_type, op_input);
 	print_usb( tempBuffer, length );
 	
@@ -81,9 +85,9 @@ void process_received_string(const char* buffer)
 		case 'v':
 			// View values for: Kd, Kp, Vm, Pr, Pm, and T			
 			#ifdef RUNBYSPEED
-			length = sprintf(tempBuffer, "Kd:%f Kp:%f Vm:%f Pr:%f Pm:%f T:%f\r\n>", G_gainDerivative, G_gainProportional, G_currentMotorSpeed, G_desiredMotorSpeed, G_currentMotorSpeed, OCR2B);
+			length = sprintf(tempBuffer, "Kd:%.2f Kp:%.2f Vm:%.2f Pr:%.2f Pm:%.2f T:%d\r\n>", G_gainDerivative, G_gainProportional, G_currentMotorSpeed, G_desiredMotorSpeed, G_currentMotorSpeed, G_torque);
 			#else
-			length = sprintf(tempBuffer, "Kd:%f Kp:%f Vm:%f Pr:%f Pm:%f T:%f\r\n>", G_gainDerivative, G_gainProportional, G_currentMotorPosition, G_desiredMotorPosition, G_currentMotorPosition, OCR2B);
+			length = sprintf(tempBuffer, "Kd:%.2f Kp:%.2f Vm:%.2f Pr:%.2f Pm:%.2f T:%d\r\n>", G_gainDerivative, G_gainProportional, G_currentMotorSpeed, G_desiredMotorPosition, G_currentMotorPosition, G_torque);
 			#endif
 			print_usb(tempBuffer, length);
 			break;
@@ -91,11 +95,23 @@ void process_received_string(const char* buffer)
 		case 'r':
 			// Set reference position in 'counts'
 			G_desiredMotorPosition = atof(op_input);
+			if(G_desiredMotorPosition < G_currentMotorPosition) {
+				G_desiredMotorPosition = -G_desiredMotorPosition;
+				MOTOR_BACKWARD;
+			} else {
+				MOTOR_FORWARD;
+			}
 			break;
 		case 'S':
 		case 's':
 			// Set reference speed in 'counts/second'
 			G_desiredMotorSpeed = atof(op_input);
+			if(G_desiredMotorSpeed < 0.0f) {
+				G_desiredMotorSpeed = -G_desiredMotorSpeed;
+				MOTOR_BACKWARD;
+			} else {
+				MOTOR_FORWARD;
+			}
 			break;
 		case 'T':
 		case 't':
@@ -103,19 +119,19 @@ void process_received_string(const char* buffer)
 			break;
 		case 'P':
 			// Increase proportional gain
-			++G_gainProportional;
+			G_gainProportional += atof(op_input);
 			break;
 		case 'p':
 			// Decrease proportional gain
-			--G_gainProportional;
+			G_gainProportional -= atof(op_input);
 			break;
 		case 'D':
 			// Increase differential gain
-			++G_gainDerivative;
+			G_gainDerivative += atof(op_input);
 			break;
 		case 'd':
 			// Decrease differential gain
-			--G_gainDerivative;
+			G_gainDerivative -= atof(op_input);
 			break;
 		default:
 			print_usb( "Bad Option. Try one of {LVRSTPpDd}\r\n", 37 );

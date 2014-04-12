@@ -9,9 +9,6 @@
 #define MOTOR_BACKWARD (PORTC &= ~(1 << 6))
 #define MOTOR_DIR_TOG (PORTC ^= (1 << 6))
 
-// How often torque is adjusted (change in time in regards to distance traveled dt)
-#define FREQUENCY 0.0033f
-
 // desired counts/sec
 volatile float G_desiredMotorSpeed;
 // desired counts
@@ -20,6 +17,9 @@ volatile float G_desiredMotorPosition;
 volatile float G_gainProportional;
 // Derivative Gain (Kd)
 volatile float G_gainDerivative;
+// The force calculated to increase/decrease power
+volatile float G_torque;
+volatile float G_lastError;
 
 void init_pd();
 

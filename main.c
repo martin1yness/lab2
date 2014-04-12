@@ -130,7 +130,7 @@ ISR(PCINT0_vect) {
 }
 
 /************************************************************************/
-/* kEEP TIME                                                            */
+/* kEEP TIME and check speed                                            */
 /************************************************************************/
 volatile float global_motorSpeeds[3];
 volatile int global_motorSpeedsIdx = 0;
@@ -165,15 +165,14 @@ int main()
 		serial_check();
 		check_for_new_bytes_received();
 		
-		if(loggingOn && G_time_ms % 1000 == 0 && lastLog != G_time_ms) {
+		if(loggingOn) {
 			lastLog = G_time_ms;
 			#ifdef RUNBYSPEED
-			len = sprintf(buf, "Speed --> Pr:%.2f Pm:%.2f T:%d counts:%d pos:%.2f\r\n>", G_currentMotorSpeed, G_desiredMotorSpeed, OCR2B, global_counts_m1, G_currentMotorPosition);
+			len = sprintf(buf, "S --> Pr:%.2f Pm:%.2f T:%.2f R:%d E:%.2f pos:%.2f\r\n>", G_currentMotorSpeed, G_desiredMotorSpeed, G_torque, OCR2B, G_lastError, G_currentMotorPosition);
 			#else
-			len = sprintf(buf, "Distance --> Pr:%.2f Pm:%.2f T:%d counts:%d\r\n>", G_currentMotorPosition, G_desiredMotorPosition, OCR2B, global_counts_m1);
+			len = sprintf(buf, "D --> Pr:%.2f Pm:%.2f T:%.2f R:%d E:%.2f counts:%d\r\n>", G_currentMotorPosition, G_desiredMotorPosition, G_torque, OCR2B, G_lastError, G_currentMotorPosition);
 			#endif
 			print_usb(buf, len);
 		}
-		
 	} //end while loop
 }
