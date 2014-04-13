@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 // System tasks
+#include "main.h"
 #include "menu.h"
 #include "pd.h"
 #include "trajectory_interpolator.h"
@@ -132,7 +133,7 @@ ISR(PCINT0_vect) {
 /************************************************************************/
 /* kEEP TIME and check speed                                            */
 /************************************************************************/
-volatile float global_motorSpeeds[3];
+volatile float* global_motorSpeeds; 
 volatile int global_motorSpeedsIdx = 0;
 ISR(TIMER3_COMPA_vect) {
 	++G_time_ms;
@@ -140,10 +141,9 @@ ISR(TIMER3_COMPA_vect) {
 		// 100 ms
 		float lastPosition = G_currentMotorPosition;
 		G_currentMotorPosition = global_counts_m1 / 4.0f;
-		global_motorSpeedsIdx = (global_motorSpeedsIdx + 1) % 3;
+		global_motorSpeedsIdx = (global_motorSpeedsIdx + 1) % MOTOR_SPEED_SAMPLES;
 		float diff = lastPosition - G_currentMotorPosition;
-		global_motorSpeeds[global_motorSpeedsIdx] = (diff < 0 ? -diff : diff) * 10;
-		G_currentMotorSpeed = (global_motorSpeeds[0] + global_motorSpeeds[1] + global_motorSpeeds[2]) / 3.0f;
+		global_motorSpeeds[global_motorSpeedsIdx] = (diff < 0 ? -diff : diff) * 10;				
 	}
 }
 
@@ -156,6 +156,8 @@ int main()
 	clear();	// clear the LCD
 	init_menu();
 	
+	global_motorSpeeds = malloc(sizeof(float) * MOTOR_SPEED_SAMPLES);
+	
 	//enable interrupts
 	sei();
 
@@ -165,7 +167,13 @@ int main()
 		serial_check();
 		check_for_new_bytes_received();
 		
-		if(loggingOn) {
+		float speedSamples = 0.0f;
+		for(int i=MOTOR_SPEED_SAMPLES; i>=0; i--) {
+			speedSamples += global_motorSpeeds[i];
+		}
+		G_currentMotorSpeed = speedSamples / MOTOR_SPEED_SAMPLES;
+		
+		if(loggingOn && G_time_ms % 20 == 0 && lastLog != G_time_ms) {
 			lastLog = G_time_ms;
 			#ifdef RUNBYSPEED
 			len = sprintf(buf, "S --> Pr:%.2f Pm:%.2f T:%.2f R:%d E:%.2f pos:%.2f\r\n>", G_currentMotorSpeed, G_desiredMotorSpeed, G_torque, OCR2B, G_lastError, G_currentMotorPosition);

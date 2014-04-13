@@ -5,8 +5,8 @@
 #ifndef pd_h
 #define pd_h
 
-#define MOTOR_FORWARD (PORTC |= (1 << 6))
-#define MOTOR_BACKWARD (PORTC &= ~(1 << 6))
+#define MOTOR_FORWARD (PORTC &= ~(1 << 6))
+#define MOTOR_BACKWARD (PORTC |= (1 << 6))
 #define MOTOR_DIR_TOG (PORTC ^= (1 << 6))
 
 // desired counts/sec

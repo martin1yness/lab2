@@ -94,23 +94,16 @@ void process_received_string(const char* buffer)
 		case 'R':
 		case 'r':
 			// Set reference position in 'counts'
-			G_desiredMotorPosition = atof(op_input);
-			if(G_desiredMotorPosition < G_currentMotorPosition) {
-				G_desiredMotorPosition = -G_desiredMotorPosition;
-				MOTOR_BACKWARD;
-			} else {
-				MOTOR_FORWARD;
-			}
+			G_desiredMotorPosition = atof(op_input);			
 			break;
 		case 'S':
 		case 's':
-			// Set reference speed in 'counts/second'
+			// Set reference speed in 'counts/second'			
 			G_desiredMotorSpeed = atof(op_input);
-			if(G_desiredMotorSpeed < 0.0f) {
-				G_desiredMotorSpeed = -G_desiredMotorSpeed;
-				MOTOR_BACKWARD;
-			} else {
-				MOTOR_FORWARD;
+			if(G_desiredMotorSpeed > 55) {
+				G_desiredMotorSpeed = 55; // max speed
+			} else if(G_desiredMotorSpeed < -55) {
+				G_desiredMotorSpeed = -55; // max neg speed
 			}
 			break;
 		case 'T':

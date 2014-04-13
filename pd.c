@@ -48,8 +48,8 @@ T - 10e / ( (e - e') / .05 ) = Kd
 volatile uint16_t everySix = 0; // every sitxth execution is just under 20ms
 volatile float G_lastError = 0;
 
-volatile float G_gainProportional = 5.0f;
-volatile float G_gainDerivative = 7.2f;
+volatile float G_gainProportional = 5.6f;
+volatile float G_gainDerivative = -0.72f;
 volatile float G_torque = 0;
 ISR(TIMER0_COMPA_vect) {
 	if(++everySix % 6 != 0) {
@@ -57,22 +57,36 @@ ISR(TIMER0_COMPA_vect) {
 	}
 		
 	#ifdef RUNBYSPEED
-	float error = (G_desiredMotorSpeed - G_currentMotorSpeed);	
+	float error = (G_desiredMotorSpeed - G_currentMotorSpeed);
+	MOTOR_FORWARD;	
 	#else
 	float error = (G_desiredMotorPosition - G_currentMotorPosition);
+	if(error < 0) {
+		MOTOR_BACKWARD;
+	} else {
+		MOTOR_FORWARD;
+	}
 	#endif
 	
-	// -.5 * 50 + .05 * (50 / .05) = -25 + 50 = 25
-	G_torque = G_gainProportional * error + G_gainDerivative * ( (G_lastError - error) / 0.05f);		
-	
+	// 55 counts/sec = 255 torque
+	// .83 counts/sec = 10 torque
+	// 21 counts/sec = 100 torque
+	//
+	// Systems of Equations:
+	// 20 = Kp*1 + Kd*-1/.05 subtrac 200/30 = Kp*30/30 + KD*-21/.05/30   (14)
+	// 4.3333 = -Kd6 -> Kd ~ -.72222
+	// 20 = Kp + 14.444 ~ 5.6  or 
+	G_torque = G_gainProportional * error + G_gainDerivative * ( (G_lastError - error) / 0.05f);			
 	G_lastError = error;
 	
-	int16_t newOcr2b = OCR2B + G_torque;
-	if(newOcr2b > 255) {
+	//return;
+	
+	int sum = OCR2B + G_torque;
+	if(sum > 255) {
 		OCR2B = 255;
-	} else if(newOcr2b < 0) {
+	} else if(sum < 0) {
 		OCR2B = 0;
 	} else {
-		OCR2B = newOcr2b;
+		OCR2B = sum;
 	}
 }

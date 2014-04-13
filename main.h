@@ -11,6 +11,8 @@
 
 #define SET_TIMER1_PRESCALER(x)     (TCCR1B |= ##x)
 #define SET_TIMER1_COMPAREMATCH(x)  (OCR1A = ##x)
+#define MOTOR_SPEED_SAMPLES 3
+
 // unit: counts/sec
 volatile float G_currentMotorSpeed;
 // counts since startup
