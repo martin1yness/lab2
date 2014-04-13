@@ -1,4 +1,4 @@
-#define RUNBYSPEED
+//#define RUNBYSPEED
 
 #include <pololu/orangutan.h>
 #include <pololu/OrangutanDigital.h>
@@ -178,7 +178,7 @@ int main()
 			#ifdef RUNBYSPEED
 			len = sprintf(buf, "S --> Pr:%.2f Pm:%.2f T:%.2f R:%d E:%.2f pos:%.2f\r\n>", G_currentMotorSpeed, G_desiredMotorSpeed, G_torque, OCR2B, G_lastError, G_currentMotorPosition);
 			#else
-			len = sprintf(buf, "D --> Pr:%.2f Pm:%.2f T:%.2f R:%d E:%.2f counts:%d\r\n>", G_currentMotorPosition, G_desiredMotorPosition, G_torque, OCR2B, G_lastError, G_currentMotorPosition);
+			len = sprintf(buf, "D --> Pr:%.2f Pm:%.2f T:%.2f R:%d E:%.2f pos:%.2f\r\n>", G_currentMotorPosition, G_desiredMotorPosition, G_torque, OCR2B, G_lastError, G_currentMotorPosition);
 			#endif
 			print_usb(buf, len);
 		}

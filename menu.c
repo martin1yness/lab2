@@ -1,4 +1,4 @@
-#define RUNBYSPEED
+//#define RUNBYSPEED
 
 #include "menu.h"
 #include "main.h"

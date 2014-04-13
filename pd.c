@@ -1,4 +1,4 @@
-#define RUNBYSPEED
+//#define RUNBYSPEED
 
 #include<float.h>
 #include "pd.h"
