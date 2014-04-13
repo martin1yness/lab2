@@ -109,6 +109,7 @@ void process_received_string(const char* buffer)
 		case 'T':
 		case 't':
 			// Execute Trajectory
+			executeTrajectoryFlag = 0x1;
 			break;
 		case 'P':
 			// Increase proportional gain

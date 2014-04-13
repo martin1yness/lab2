@@ -26,6 +26,7 @@ volatile float G_currentMotorPosition = 0.0;
 volatile float G_desiredMotorSpeed = 0.0;
 volatile float G_desiredMotorPosition = 0.0;
 volatile char loggingOn = 0x0;
+volatile char executeTrajectoryFlag = 0x0;
 volatile uint32_t lastLog = 0;
 
 
@@ -166,6 +167,10 @@ int main()
 	while (1) {
 		serial_check();
 		check_for_new_bytes_received();
+		
+		if(executeTrajectoryFlag == 0x1) {
+			executeTrajectory();
+		}
 		
 		float speedSamples = 0.0f;
 		for(int i=MOTOR_SPEED_SAMPLES; i>=0; i--) {

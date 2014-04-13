@@ -24,4 +24,7 @@ volatile int global_counts_m1;
 
 volatile char loggingOn;
 
+// If true, trajectory will be executed
+volatile char executeTrajectoryFlag;
+
 #endif

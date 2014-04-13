@@ -4,6 +4,7 @@
 #include "pd.h"
 #include "main.h"
 #include "menu.h"
+#include "trajectory_interpolator.h"
 
 /************************************************************************/
 /*
@@ -47,7 +48,7 @@ volatile uint16_t everySix = 0; // every sitxth execution is just under 20ms
 volatile float G_lastError = 0;
 
 volatile float G_gainProportional = 5.6f;
-volatile float G_gainDerivative = -0.72f;
+volatile float G_gainDerivative = -6.72f;
 volatile float G_torque = 0;
 ISR(TIMER0_COMPA_vect) {
 	if(++everySix % 6 != 0) {
@@ -62,10 +63,12 @@ ISR(TIMER0_COMPA_vect) {
 	#else
 	float error = (G_desiredMotorPosition - G_currentMotorPosition);
 	if(error < 0) {
+		error = -error;
 		MOTOR_BACKWARD;
 	} else {
 		MOTOR_FORWARD;
 	}
+	
 	#endif
 	
 	// 55 counts/sec = 255 torque
@@ -76,7 +79,15 @@ ISR(TIMER0_COMPA_vect) {
 	// 20 = Kp*1 + Kd*-1/.05 subtrac 200/30 = Kp*30/30 + KD*-21/.05/30   (14)
 	// 4.3333 = -Kd6 -> Kd ~ -.72222
 	// 20 = Kp + 14.444 ~ 5.6  or 
+	
+	// Let e=4.74 and Let Kp = 5.6
+	// 
 	G_torque = G_gainProportional * error + G_gainDerivative * ( (G_lastError - error) / 0.05f);			
+		
+	if(G_lastError == error && error < 5) {
+		// torque failed to change error, must be in a rest state
+		trajactoryFlag = 0x1;
+	}
 	G_lastError = error;
 	
 	//return;
