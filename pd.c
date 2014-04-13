@@ -51,7 +51,8 @@ volatile float G_gainProportional = 5.6f;
 volatile float G_gainDerivative = -6.72f;
 volatile float G_torque = 0;
 ISR(TIMER0_COMPA_vect) {
-	if(++everySix % 6 != 0) {
+	// Skiping 61 executions to get frequench to ~5Hz for Question 4 in Lab 2
+	if(++everySix % 61 != 0) {
 		red_led(0);
 		return;		
 	}
@@ -93,8 +94,9 @@ ISR(TIMER0_COMPA_vect) {
 	//return;
 	
 	int sum = OCR2B + (int)G_torque;
-	if(sum > 255) {
-		OCR2B = 255;
+	// Adding torque limit to stop reset
+	if(sum > 155) {
+		OCR2B = 155;
 	} else if(sum < 0) {
 		OCR2B = 0;
 	} else {
