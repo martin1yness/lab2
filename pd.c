@@ -12,15 +12,13 @@
 /************************************************************************/
 inline void init_pd() {
 	//
-	// Set 8-Bit Time/Counter 2 for 1ms resolution
+	// Set 8-Bit Time/Counter 2
 	//
 	//   20mil * 1/prescaler * 1/CompareMatchRegister = 1000 Hz (1ms)
 	//   20mil / 256 / 255 = ~306.4 Hz (~3.3ms)
-	//
-	// setting of WGM01 to get CTC mode
-	TCCR0A = 0x08; // 0000_0100
-	//  00 (n/a) 00 (read-only) 0 (Fast PWM) 010 (8 prescaler)
-	TCCR0B = 0x02; // 0000_0101
+	//	
+	TCCR0A = 0xC2; // 11xxxx01
+	TCCR0B |= 0x05; // 0000_0101
 	//  00000 (reserved) 0 (compare b interrupt) 1 (compare a interrupt) 0 (overflow interrupt)
 	TIMSK0 = 0x02; // 0000_0010
 	// Output Compare Registers 0 A
@@ -53,8 +51,10 @@ volatile float G_gainDerivative = -0.72f;
 volatile float G_torque = 0;
 ISR(TIMER0_COMPA_vect) {
 	if(++everySix % 6 != 0) {
+		red_led(0);
 		return;		
 	}
+	red_led(1);
 		
 	#ifdef RUNBYSPEED
 	float error = (G_desiredMotorSpeed - G_currentMotorSpeed);
@@ -81,7 +81,7 @@ ISR(TIMER0_COMPA_vect) {
 	
 	//return;
 	
-	int sum = OCR2B + G_torque;
+	int sum = OCR2B + (int)G_torque;
 	if(sum > 255) {
 		OCR2B = 255;
 	} else if(sum < 0) {
